@@ -44,10 +44,18 @@ pub fn hsv(hue: f64, sat: f64, val: f64) -> Rgb<u8> {
 pub fn color_gen(speed: i32) -> Vec<Rgb<u8>> {
     let mut colors: Vec<Rgb<u8>> = Vec::new();
 
-    for i in 0..1000i32 {
+    /*for i in 0..1000i32 {
         let angle = (i * speed + 360 / 3 * 2) as f64;
-        let color = hsv(angle.rem_euclid(360.0), 1.0, 1.0);
+        let color = hsv(angle.rem_euclid(360.0), 1.0, 0.80);
 
+        colors.push(color);
+    }*/
+
+    for _ in 0..1000i32 {
+        let color = hsv(0.0, 0.0, 0.0);
+        colors.push(color);
+
+        let color = hsv(0.0, 0.0, 1.0);
         colors.push(color);
     }
 

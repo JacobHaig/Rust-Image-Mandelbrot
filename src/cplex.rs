@@ -1,56 +1,50 @@
-pub struct Cplex<T> {
-    real: T,
-    im: T,
+// Sq Returns the Squared value
+#[inline(always)]
+pub fn sq<T>(a: &num::Complex<T>) -> T
+where
+    T: num::traits::Float,
+{
+    (a.re * a.re) + (a.im * a.im)
 }
 
-impl<T> Cplex<T> {
-    #[inline(always)]
-    pub fn new(real: T, im: T) -> Cplex<T> {
-        Cplex { real, im }
-    }
+// Add_c Adds another complex to this complex (similar to "+=" operator)
+#[inline(always)]
+pub fn add_c<'a, T>(a: &'a mut num::Complex<T>, b: &'a num::Complex<T>) -> &'a num::Complex<T>
+where
+    T: num::traits::Float + num::traits::NumAssign,
+{
+    a.re += b.re;
+    a.im += b.im;
+    a
+}
 
-    // Sq Returns the Squared value
-    #[inline(always)]
-    pub fn Sq(&self) -> T
-    where
-        T: num::traits::Float,
-    {
-        (self.real * self.real) + (self.im * self.im)
-    }
+// Pow2 Multiplies this complex by its self
+#[inline(always)]
+pub fn pow2<T>(a: &mut num::Complex<T>) -> &mut num::Complex<T>
+where
+    T: num::traits::Float,
+{
+    let re = (a.re * a.re) - (a.im * a.im);
+    let im = (a.re * a.im) + (a.im * a.re);
+    a.re = re;
+    a.im = im;
+    a
+}
 
-    // AddTo Adds another complex to this complex (similar to "+=" operator)
-    #[inline(always)]
-    pub fn AddTo(&mut self, b: &Cplex<T>)
-    where
-        T: num::traits::Float + num::traits::NumAssign,
-    {
-        self.real += b.real;
-        self.im += b.im;
-    }
+// mandel is a combination of the Pow2 function and add_c function.
+// It preforms z = z * z + c where z is a and c is b.
+// This function can also be written as z.pow2().add_c(c)
+#[inline(always)]
+pub fn mandel<'a, T>(a: &'a mut num::Complex<T>, b: &'a num::Complex<T>) -> &'a num::Complex<T>
+where
+    T: num::traits::Float,
+{
+    let new_re = (a.re * a.re) - (a.im * a.im);
+    let new_im = (a.re * a.im) + (a.im * a.re);
+    a.re = new_re + b.re;
+    a.im = new_im + b.im;
 
-    // MultBy Multiplies this complex by another complex (similar to "*=" operator)
-    /*#[inline(always)]
-    pub fn MultBy(&mut self, b: &mut Cplex<T>)
-    where
-        T: num::traits::Float,
-    {
-        let re = (self.real * b.real) - (self.im * b.im);
-        let im = (self.real * b.im) + (self.im * b.real);
-        b.real = re;
-        b.im = im;
-    }*/
-
-    // Pow2 Multiplies this complex by its self
-    #[inline(always)]
-    pub fn Pow2(&mut self)
-    where
-        T: num::traits::Float,
-    {
-        let re = (self.real * self.real) - (self.im * self.im);
-        let im = (self.real * self.im) + (self.im * self.real);
-        self.real = re;
-        self.im = im;
-    }
+    a
 }
 
 //impl Mult<T> for Cplex<T> {}
