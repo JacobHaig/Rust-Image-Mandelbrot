@@ -9,6 +9,7 @@ where
 
 // Add_c Adds another complex to this complex (similar to "+=" operator)
 #[inline(always)]
+#[allow(dead_code)]
 pub fn add_c<'a, T>(a: &'a mut num::Complex<T>, b: &'a num::Complex<T>) -> &'a num::Complex<T>
 where
     T: num::traits::Float + num::traits::NumAssign,
@@ -20,6 +21,7 @@ where
 
 // Pow2 Multiplies this complex by its self
 #[inline(always)]
+#[allow(dead_code)]
 pub fn pow2<T>(a: &mut num::Complex<T>) -> &mut num::Complex<T>
 where
     T: num::traits::Float,

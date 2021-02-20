@@ -41,7 +41,8 @@ pub fn hsv(hue: f64, sat: f64, val: f64) -> Rgb<u8> {
     ])
 }
 
-pub fn color_gen(speed: i32) -> Vec<Rgb<u8>> {
+#[allow(dead_code)]
+pub fn color_gen(_speed: i32) -> Vec<Rgb<u8>> {
     let mut colors: Vec<Rgb<u8>> = Vec::new();
 
     /*for i in 0..1000i32 {
