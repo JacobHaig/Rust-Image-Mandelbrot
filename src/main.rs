@@ -50,12 +50,17 @@ fn main() {
     println!("Total time elapsed {} ms", start_time.elapsed().as_millis());
 }
 
-// pixel_loop preforms the computation of mandelbrot image with the given Mandelbrot settings
+/// pixel_loop preforms the computation of mandelbrot image.
+/// # Arguments
+///     Takes a referance to a `MandelbrotSettings` object.
+/// # Returns
+///     An `ImageBuffer` containing a Vec of u8s.
 fn pixel_loop(mbs: &MandelBrotSettings) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
     // Generate lookup arrays
     let color_lookup: &Vec<Rgb<u8>> = &colors::color_gen(3);
     let normal_lookup: &Vec<Vec<f32>> = &normal_gen(mbs);
 
+    // Iterates over normalized values and maps its coordiates to the complex graph
     let data: Vec<Rgb<u8>> = normal_lookup[1]
         .par_iter()
         .map(|&j| {
