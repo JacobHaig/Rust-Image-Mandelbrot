@@ -1,7 +1,3 @@
-// This is because of the Crate name.
-// please use snake_case when possible
-#![allow(non_snake_case)]
-
 use image::*;
 use rayon::prelude::*;
 use std::path::PathBuf;
@@ -13,52 +9,49 @@ mod cplex;
 // information for how we want the image to
 // be normalized to the graph and produce an image
 struct MandelBrotSettings {
-    x1: f32,
-    x2: f32,
-    y1: f32,
-    y2: f32,
+    height: u32,
+    width: u32,
 
-    h: u32,
-    w: u32,
+    x: f64,
+    y: f64,
+
+    zoom: f64,
 }
-
-// Other ImageMandelBrot settings
-// x1 = -2.0,   x2 = 1.0,    y1 = 1.0,    y2 = -1.0
-// x1 = -0.2,   x2 = 0.0,    y1 = -0.8,   y2 = -1.0
-// x1 = -0.1,   x2 = -0.05,  y1 = -0.8,   y2 = -0.85
 
 fn main() {
     let start_time = std::time::Instant::now();
 
-    // Set up Mandelbrot Settings
-    let file_out = PathBuf::from(r"image\out\mandelbrot2.jpg");
-    let size = 2;
-    let mbs = MandelBrotSettings {
-        h: 1080 * size,
-        w: 1920 * size,
-        x1: -2.0,
-        x2: 1.0,
-        y1: 1.0,
-        y2: -1.0,
-    };
+    let size = 1.0;
 
-    let image = pixel_loop(&mbs);
+    for iter in 0..=40 {
+        // Set up Mandelbrot Settings
+        let mbs = MandelBrotSettings {
+            height: (1080.0 * size) as u32,
+            width: (1920.0 * size) as u32,
 
-    // Save the image with the specified file name
-    image.save(file_out).expect("Could not save");
+            x: -0.76679001500011,
+            y: -0.1000005000931,
+
+            zoom: iter as f64,
+        };
+
+        // Generate the image
+        let image = mandel_brot(&mbs);
+
+        // Save the image with the specified file name
+        let file_out = PathBuf::from(format!("image/out/zoom_{}.jpg", iter));
+
+        image.save(file_out).expect("Could not save");
+    }
 
     println!("Total time elapsed {} ms", start_time.elapsed().as_millis());
 }
 
 /// pixel_loop preforms the computation of mandelbrot image.
-/// # Arguments
-///     Takes a referance to a `MandelbrotSettings` object.
-/// # Returns
-///     An `ImageBuffer` containing a Vec of u8s.
-fn pixel_loop(mbs: &MandelBrotSettings) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+fn mandel_brot(settings: &MandelBrotSettings) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
     // Generate lookup arrays
-    let color_lookup: &Vec<Rgb<u8>> = &colors::color_gen(3);
-    let normal_lookup: &Vec<Vec<f32>> = &normal_gen(mbs);
+    let color_lookup = colors::color_gen(5);
+    let normal_lookup = normal_gen(settings);
 
     // Iterates over normalized values and maps its coordiates to the complex graph
     let data: Vec<Rgb<u8>> = normal_lookup[1]
@@ -66,16 +59,14 @@ fn pixel_loop(mbs: &MandelBrotSettings) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
         .map(|&j| {
             normal_lookup[0].par_iter().map(move |&i| {
                 let c = num::Complex::new(i, j);
-                let mut z = num::Complex::new(0f32, 0f32);
+                let mut z = num::Complex::new(0f64, 0f64);
 
-                let max_iter = 150usize;
+                const MAX_ITER: usize = 500usize;
 
                 // Complex Loop
-                for t in 0..max_iter {
+                for t in color_lookup.iter().take(MAX_ITER) {
                     if cplex::sq(&z) > 4.0 {
-                        // Apply color to everything that eventailly ends,
-                        // If a point does converge it will be colored.
-                        return color_lookup[t];
+                        return *t;
                     }
 
                     cplex::mandel(&mut z, &c);
@@ -89,7 +80,8 @@ fn pixel_loop(mbs: &MandelBrotSettings) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
         .collect();
 
     // Create the Image and move the pixals into the image
-    let mut rgb = image::DynamicImage::new_rgb8(mbs.w, mbs.h).into_rgb8();
+    let mut rgb = image::DynamicImage::new_rgb8(settings.width, settings.height).into_rgb8();
+
     rgb.pixels_mut().enumerate().for_each(|(i, p)| *p = data[i]);
 
     rgb
@@ -98,12 +90,20 @@ fn pixel_loop(mbs: &MandelBrotSettings) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
 // The normalize function takes a value between a range of numbers and normalize
 // it between a new range of numbers. For instance, if the range is 10..20 with
 // a value of 15, and the new range is 0..100, the new value will be 50.
-fn normalize<T, I: 'static>(value: T, from_min: I, from_max: I, to_min: I, to_max: I) -> I
+fn normalize<F, T: 'static>(value: F, from_min: T, from_max: T, to_min: T, to_max: T) -> T
 where
-    T: num::cast::AsPrimitive<I>,
-    I: Copy + num::Num,
+    F: num::cast::AsPrimitive<T>,
+    T: Copy + num::Num,
 {
     to_min + ((value.as_() - from_min) * (to_max - to_min)) / (from_max - from_min)
+}
+
+// power_of_two is a helper function to calculate 2^x
+// Ex: 2^3 = 8
+// Ex: 2^4 = 16
+// Ex: 2^5 = 32
+fn power_of_two(x: u64) -> u64 {
+    return 1 << x;
 }
 
 // normal_gen generates all possible X and Y value that could be iterated over.
@@ -113,17 +113,32 @@ where
 // 0,1  1,1  2,1
 // 0,2  1,2  2,2
 // Since X and Y are the same for there column/row, we can just store them in an array
-fn normal_gen(mb: &MandelBrotSettings) -> Vec<Vec<f32>> {
-    let mut arr: Vec<Vec<f32>> = vec![
-        Vec::with_capacity(mb.w as usize), // X
-        Vec::with_capacity(mb.h as usize), // Y
-    ];
+fn normal_gen(settings: &MandelBrotSettings) -> [Vec<f64>; 2] {
+    let cached_zoom = 1.0 / power_of_two(settings.zoom as u64) as f64;
 
-    for x in 0..mb.w as usize {
-        arr[0].push(normalize(x, 0.0, mb.w as f32, mb.x1, mb.x2));
-    }
-    for y in 0..mb.h as usize {
-        arr[1].push(normalize(y, 0.0, mb.h as f32, mb.y1, mb.y2));
-    }
-    arr
+    let arrx = (0..settings.width)
+        .map(|x| {
+            normalize(
+                x,
+                0.0,
+                settings.width as f64,
+                settings.x - cached_zoom,
+                settings.x + cached_zoom,
+            )
+        })
+        .collect();
+
+    let arry = (0..settings.height)
+        .map(|y| {
+            normalize(
+                y,
+                0.0,
+                settings.height as f64,
+                settings.y - cached_zoom,
+                settings.y + cached_zoom,
+            )
+        })
+        .collect();
+
+    [arrx, arry]
 }
